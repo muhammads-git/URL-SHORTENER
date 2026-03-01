@@ -5,6 +5,6 @@ import string, random
 
 def GenerateShortCode(length=6):
    chars = string.ascii_letters + string.digits
-   return ''.join(chars, k=length)
+   return ''.join(random.choices(chars, k=length))
 
 
