@@ -8,5 +8,5 @@ class Url(Base):
 
    id = Column(Integer, primary_key=True)
    longUrl = Column(String)
-   shortCode = Column(String, unique=True)
+   shortUrl = Column(String, unique=True)
 
