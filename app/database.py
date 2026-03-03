@@ -13,5 +13,22 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 # create engine
 engine = create_engine(DATABASE_URL)
 
+# sessionmaker
+SessionLocal = sessionmaker(
+   autoflush=False,
+   autocommit = False,
+   bind=engine
+)
 
-url_db = {}
+Base = declarative_base()
+
+
+# db
+def get_db():
+   db = SessionLocal()
+   try:
+      yield db
+   finally:
+      db.close()   
+
+# url_db = {}
