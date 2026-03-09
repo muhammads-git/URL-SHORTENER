@@ -28,8 +28,8 @@ def create_short_url(long_url: str, db: Session = Depends(get_db)):
         shortUrl=short_code,    # ← shortUrl
         longUrl=long_url
     )
-    db.add(db_url)
-    db.commit()
+    db.add(db_url)   # // insertion in db
+    db.commit()   # //
     db.refresh(db_url)
     
     return {
@@ -45,4 +45,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
     
+    url_entry.Clicks += 1
+    db.commit() # commit
+
     return RedirectResponse(url_entry.longUrl)

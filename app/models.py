@@ -9,4 +9,5 @@ class Url(Base):
    id = Column(Integer, primary_key=True)
    longUrl = Column(String)
    shortUrl = Column(String, unique=True)
+   Clicks = Column(Integer, default=0)
 
