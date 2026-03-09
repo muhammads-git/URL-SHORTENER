@@ -45,7 +45,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
     
-    url_entry.Clicks += 1
+    url_entry.clicks += 1
     db.commit() # commit
 
     return RedirectResponse(url_entry.longUrl)
