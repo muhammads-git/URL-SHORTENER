@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 app = FastAPI(title='URL SHORTENER')
 
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -49,3 +50,4 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     db.commit() # commit
 
     return RedirectResponse(url_entry.longUrl)
+
