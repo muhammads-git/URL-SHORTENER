@@ -3,8 +3,10 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
-from app.models import Url
+from app.models import Url, User
 from sqlalchemy.orm import Session
+from app.auths.auths import hashPassword
+from app.schemas.schemas import UserCreate
 
 app = FastAPI(title='URL SHORTENER')
 
@@ -15,6 +17,20 @@ Base.metadata.create_all(bind=engine)
 @app.get('/')
 def hello():
     return {"message": "Hello"}
+
+
+# ________________________REGISTRATIONS ROUTES___________________________#
+@app.post('/registration')
+def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # // check if user exists already...
+    existing = db.query(User).filter(
+        (User.username == user_data.username | User.email == user_data.email)
+    ).first()
+
+    # check 
+    if existing:
+        raise HTTPException(status_code=404)
+    # hash password................
 
 @app.post('/url_shortener')
 def create_short_url(long_url: str, db: Session = Depends(get_db)):
