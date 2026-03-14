@@ -29,5 +29,5 @@ class User(Base):
    created_at = Column(DateTime, default=datetime.utcnow)
 
    # relationship to urls 
-   url = relationship('Url', back_populates="owner")
+   urls = relationship('Url', back_populates="owner")
 

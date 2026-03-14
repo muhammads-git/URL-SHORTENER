@@ -5,8 +5,10 @@ from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
 from app.models import Url, User
 from sqlalchemy.orm import Session
-from app.auths.auths import hashPassword
+from app.auths.auths import hashPassword, checkPassword
 from app.schemas.schemas import UserCreate
+
+
 
 app = FastAPI(title='URL SHORTENER')
 
@@ -20,17 +22,32 @@ def hello():
 
 
 # ________________________REGISTRATIONS ROUTES___________________________#
-@app.post('/registration')
+@app.post('/register')
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     # // check if user exists already...
     existing = db.query(User).filter(
-        (User.username == user_data.username | User.email == user_data.email)
+        (User.username == user_data.username) | (User.email == user_data.email)
     ).first()
 
     # check 
     if existing:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, details='username or email are already taken.')
+    
     # hash password................
+    hashedPassword = hashPassword(user_data.password)
+
+    # create user
+    newUser = User(
+        username = user_data.username,
+        email = user_data.email,
+        password = hashedPassword
+    )
+    # save to db
+    db.add(newUser)
+    db.commit()
+    db.refresh(newUser)
+
+    return {'success': True, 'message':'User created!'}
 
 @app.post('/url_shortener')
 def create_short_url(long_url: str, db: Session = Depends(get_db)):
