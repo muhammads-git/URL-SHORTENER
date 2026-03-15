@@ -1,5 +1,15 @@
 from passlib.context import CryptContext
 import bcrypt
+from jose import JWTError,jwt
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+### GET .env data
+SECRET_KEY = os.getenv('SECRET_KEY')
+ALGORITHM = os.getenv('ALGORITHM')
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 
 # pwd_context = CryptContext(schemes=['bcrypt_sha256'], deprecated='auto')
 
@@ -9,7 +19,7 @@ import bcrypt
 # def  verifyPassword(plain: str, hashed: str) -> bool:
 #    return pwd_context.verify(plain, hashed)
 
-
+######################### HASHING ###########################33
 def hashPassword(password: str) -> str:
    salt = bcrypt.gensalt()
    hashed = bcrypt.hashpw(password.encode('utf-8'),salt)

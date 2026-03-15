@@ -7,6 +7,8 @@ from app.models import Url, User
 from sqlalchemy.orm import Session
 from app.auths.auths import hashPassword, checkPassword
 from app.schemas.schemas import UserCreate
+# forms 
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 
@@ -48,6 +50,24 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(newUser)
 
     return {'success': True, 'message':'User created!'}
+
+# Login route
+@app.route('/login')
+def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # now the OAuth2PasswordRequestForm will automatically handle forms
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 @app.post('/url_shortener')
 def create_short_url(long_url: str, db: Session = Depends(get_db)):
