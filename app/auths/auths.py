@@ -22,6 +22,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 ######################### HASHING ###########################33
 def hashPassword(password: str) -> str:
+   # create salt
    salt = bcrypt.gensalt()
    hashed = bcrypt.hashpw(password.encode('utf-8'),salt)
    return hashed.decode('utf-8')  # store as string
@@ -45,21 +46,21 @@ def createAccessToken(data: dict, expires_delta: timedelta = None):
     """
      
      
-    toEncode = data .copy()
+    toEncode = data.copy()
 
     # Set expiry time
 
-    if expires_delta:
-       expire = datetime.utcnow() + expires_delta
-    else:
-       expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+   #  if expires_delta:
+   #     expire = datetime.utcnow() + expires_delta
+   #  else:
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     # add to existing dict
     toEncode.update({'exp':expire})
 
     # create token
     encodedJWT = jwt.encode(toEncode, SECRET_KEY, algorithm=ALGORITHM)
-
+    print("Encoded tokens: ", encodedJWT) 
     return encodedJWT
 
 def decodeToken(token: str):
