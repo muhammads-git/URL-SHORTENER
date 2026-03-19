@@ -40,12 +40,6 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         else:
             detail = 'Email already taken!'
         raise HTTPException(status_code=404, detail=detail)
-    
-    print(f"Checking registration for: {user_data.username}, {user_data.email}")
-    if existing:
-        print(f"FOUND MATCH: username={existing.username}, email={existing.email}")
-    else:
-        print("No match found - this username/email is available")
 
     # hash password................
     hashedPassword = hashPassword(user_data.password)
@@ -73,12 +67,8 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     if not user or not checkPassword(user_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
     # create token
-
     accessToken = createAccessToken(data={'sub':user.password})
-
-
    # return access token and its type
     return {'access_token': accessToken, 'token_type': 'bearer'}
 
