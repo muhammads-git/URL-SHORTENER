@@ -82,13 +82,6 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
    # return access token and its type
     return {'access_token': accessToken, 'token_type': 'bearer'}
 
-# Protected route
-@app.get('/users/me')
-def read_users_me(token: str = Depends(oauth2_scheme)):
-    username = decodeToken(token)
-    if not username:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return {"username": username}
 
 
 #             SHORTENER             #
@@ -122,8 +115,29 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
     
+    """
+    now increment in clicks
+    to track the url visitors... 
+    """
     url_entry.clicks += 1
     db.commit() # commit
 
     return RedirectResponse(url_entry.longUrl)
 
+
+# most visited site by user
+
+@app.get('/user_most_visited_site')
+def top_visited_stie(user_id: int, db: Session = Depends(get_db)):
+    mostVisited = db.query(Url).filter(
+        Url.user_id == user_id
+    ).order_by(
+        Url.clicks.desc() # short by desc
+    ).first()
+    
+    if not mostVisited:
+        return {'message': "No Url found"}
+    return {
+        'most_visited_url': mostVisited.longUrl,
+        'Total visitors': mostVisited.clicks
+    }
