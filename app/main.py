@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse,HTMLResponse
 from pydantic import BaseModel
 from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
@@ -7,21 +7,36 @@ from app.models import Url, User
 from sqlalchemy.orm import Session
 from app.auths.auths import hashPassword, checkPassword,ACCESS_TOKEN_EXPIRE_MINUTES,createAccessToken,getTokenExpiration,decodeToken
 from app.schemas.schemas import UserCreate
+from fastapi.templating import Jinja2Templates
 
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
+# get current user
+def getCurrentUser(token: str = Depends(oauth2_scheme)):
+    username = decodeToken(token)
+    if not username:
+        raise HTTPException(
+            status_code=404,
+            detail='Invalid Token or no such user found'
+        )
+    else:
+        return username
 
+
+# set up FASTAPI instance
 app = FastAPI(title='URL SHORTENER')
 
+# set up templates directory
+templates = Jinja2Templates(directory='app/templates')
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-@app.get('/')
-def hello():
-    return {"message": "Hello"}
+@app.get('/', response_class=HTMLResponse)
+async def hello( request: Request):
+    return templates.TemplateResponse('index.html'),{'request': request}
 
 
 # ________________________REGISTRATIONS ROUTES___________________________#
