@@ -7,28 +7,8 @@ from app.models import Url, User
 from sqlalchemy.orm import Session
 from app.auths.auth import hashPassword, checkPassword,ACCESS_TOKEN_EXPIRE_MINUTES,createAccessToken,getTokenExpiration,decodeToken
 from app.schemas.schema import UserCreate
-
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import datetime,timedelta
-import sys
-print("Python path:", sys.path)
-
-print("Importing database...")
-from app.database import engine, Base, get_db
-print("Database imported")
-
-print("Importing models...")
-from app.models import Url, User
-print("Models imported")
-
-print("Importing auths...")
-from app.auths.auth import hashPassword, checkPassword, createAccessToken, decodeToken
-print("Auths imported")
-
-print("Importing schemas...")
-from app.schemas.schema import UserCreate
-print("All imports successful!")
-
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
@@ -113,7 +93,17 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
+    # fetch currect user id from db
+    user_id = db.query(User.id).filter(User.username == current_user).first()
 
+    if not user_id :
+        raise HTTPException(status_code=404,detail='User id not found!')
+    
+    
+    """ 
+        genrate short code, 
+        then check if the same code already exists
+     """
     short_code = GenerateShortCode()
     
     # Check if code already exists
@@ -127,8 +117,8 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     db_url = Url(
         shortUrl=short_code,    # ← shortUrl
         longUrl=long_url,
-        # expiry date
-        expires_at = valid_days
+        expires_at = valid_days,
+        user_id=user_id
     )
     db.add(db_url)   # // insertion in db
     db.commit()   # //
@@ -138,6 +128,7 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
         'shortUrl': f'http://localhost:8000/{short_code}',
         'code': short_code,
         'longUrl': long_url
+
     }
 
 @app.get('/{short_code}')
