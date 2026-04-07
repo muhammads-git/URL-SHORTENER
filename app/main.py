@@ -9,7 +9,7 @@ from app.auths.auth import hashPassword, checkPassword,ACCESS_TOKEN_EXPIRE_MINUT
 from app.schemas.schema import UserCreate
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import datetime,timedelta
-
+from fastapi.middleware.cors import CORSMiddleware
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -96,8 +96,8 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     # fetch currect user id from db
     user_id = db.query(User.id).filter(User.username == current_user).first()
 
-    if not user_id :
-        raise HTTPException(status_code=404,detail='User id not found!')
+    # if not user_id :
+    #     raise HTTPException(status_code=404,detail='User id not found!')
     
     
     """ 
@@ -149,5 +149,6 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     url_entry.clicks += 1
     db.commit() # commit
 
-    return RedirectResponse(url_entry.longUrl)
+    url = url_entry.longUrl 
+    return RedirectResponse(url)
 
