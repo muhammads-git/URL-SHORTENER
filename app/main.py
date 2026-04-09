@@ -4,7 +4,8 @@ from fastapi.responses import RedirectResponse
 from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
 from app.models import Url, User
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session 
+from sqlalchemy import text
 from app.auths.auth import hashPassword, checkPassword,ACCESS_TOKEN_EXPIRE_MINUTES,createAccessToken,getTokenExpiration,decodeToken
 from app.schemas.schema import UserCreate
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -131,6 +132,50 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
 
     }
 
+"""
+    get/analytics
+
+"""
+
+@app.get('/analytics')
+def analytics(request: Request,db: Session = Depends(get_db),current_user = Depends(getCurrentUser)):
+    # first() returns a ORM obj. so we can access data by . DOT
+    user_id = db.query(User).filter(User.username == current_user).first()
+
+    if not  user_id:
+        raise HTTPException(status_code=404, detail='user_id not found!')
+    
+    data = db.query(Url.longUrl,Url.shortUrl,Url.clicks).filter(Url.user_id == user_id).all()
+    
+    if not data:
+        raise HTTPException(detail='No data found!')
+    
+    # " turn this list of tuples into list of dictionary to access it easily"
+    list_data = []
+    for d in data:
+        list_data.append({
+
+            'long_url':d.longUrl,
+            'short_url':d.shortUrl,
+            'clicks':d.clicks
+        })
+
+    """ find the URL with most clicks"""
+
+    most_clicked = max(list_data, key=lambda x: x['clicks'] )
+
+    return {
+    'most_clicked': most_clicked,
+    'all_links': [
+        {
+            'long_url': item['long_url'],
+            'short_code': item['short_url'],
+            'clicks': item['clicks']
+        }
+        for item in list_data
+    ]
+}
+
 @app.get('/{short_code}')
 def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     url_entry = db.query(Url).filter(Url.shortUrl == short_code).first()  # ← shortUrl
@@ -150,5 +195,5 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     db.commit() # commit
 
     url = url_entry.longUrl 
-    return RedirectResponse(url)
 
+    return RedirectResponse(url)
