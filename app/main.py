@@ -9,8 +9,10 @@ from sqlalchemy import text
 from app.auths.auth import hashPassword, checkPassword,ACCESS_TOKEN_EXPIRE_MINUTES,createAccessToken,getTokenExpiration,decodeToken
 from app.schemas.schema import UserCreate
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,timezone
 from fastapi.middleware.cors import CORSMiddleware
+from app.schedular.background_job import startSchedular,shutdownSchedular
+import atexit
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -28,6 +30,11 @@ def getCurrentUser(token: str = Depends(oauth2_scheme)):
 # set up FASTAPI instance
 app = FastAPI(title='URL SHORTENER')
 
+# start schedular
+schedular = startSchedular()
+
+# shutdown
+atexit.register(lambda: shutdownSchedular(schedular))
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -183,7 +190,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
     
-    if url_entry.expires_at < datetime.utcnow():
+    if url_entry.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=410, detail='Link has been expired!')
 
     

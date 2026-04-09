@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer , String, DateTime , ForeignKey ,Interval
 from sqlalchemy.orm import relationship
 from app.database import Base
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class Url(Base):
@@ -12,8 +12,9 @@ class Url(Base):
    shortUrl = Column(String, unique=True)
    clicks = Column(Integer, default=0)
    created_at = Column(DateTime, default=datetime.utcnow)
+
    # new column
-   expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(days=30))
+   expires_at = Column(DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(days=30))
 
    # relationship col
    user_id = Column(Integer, ForeignKey('users.id') ,nullable=True)
