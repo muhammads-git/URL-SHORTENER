@@ -13,6 +13,7 @@ from datetime import datetime,timedelta,timezone
 from fastapi.middleware.cors import CORSMiddleware
 from app.schedular.background_job import startSchedular,shutdownSchedular
 import atexit
+from app.services.rate_limiting_service import checkRateLimit
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -98,6 +99,12 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 #             SHORTENER             #
 @app.post('/url_shortener')
 def create_short_url(request: Request, long_url: str = Form(...), valid_days : int = Form(30) , db: Session = Depends(get_db), current_user = Depends(getCurrentUser)):
+    """
+    check rate limit
+    if true allow or block request
+    """
+    checkRateLimit(request, max_req=5, time_window=60)
+    
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
