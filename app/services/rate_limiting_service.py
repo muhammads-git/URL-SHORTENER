@@ -11,30 +11,22 @@ redis_client = Redis(
 )
 
 
-def getClientIdentifier(request : Request) -> str:
+def getClientIdentifier(request : Request, user_id=None) -> str:
    """
    get a unique identifier for client
    if logged in use USER ID
    or
    if not user IP 
    """
-   # get user id
-   # username = getCurrentUser()
-   # if not username:
-   #    raise HTTPException(detail='User not found, we will user IP for rate limiting...')
-   
-   # user_id = db.query(User).filter(User.username == username).first()
-   # if not user_id:
-   #    raise HTTPException(detail='User id not found.')
-   
-   
-
-   client_ip = request.client.host
-   # print(f'CLIENT IP ADDRESS: {client_ip}')
-   return f'rate_limit: {client_ip}'
+   if user_id:
+      return f'rate_limit: {user_id}'
+   else:
+      client_ip = request.client.host
+      # print(f'CLIENT IP ADDRESS: {client_ip}')
+      return f'rate_limit: {client_ip}'
 
 
-def checkRateLimit(request: Request, max_req: int = 5, time_window: int =60) -> bool:
+def checkRateLimit(request: Request,user_id=None, max_req: int = 5, time_window: int =60) -> bool:
    """
    this function checks rate limit
 

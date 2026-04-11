@@ -103,7 +103,11 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     check rate limit
     if true allow or block request
     """
-    checkRateLimit(request, max_req=5, time_window=60)
+    # fettch user_id from getcurrentuser function if is
+    # or
+    # use client_ip for identifier
+    user_id = db.query(User.id).filter(User.username == current_user).first()
+    checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
