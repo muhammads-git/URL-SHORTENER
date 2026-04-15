@@ -4,6 +4,20 @@ from app.database import Base
 from datetime import datetime, timedelta, timezone
 
 
+
+class User(Base):
+   __tablename__ = "users"
+
+   id = Column(Integer, primary_key=True, index=True, nullable=False)
+   username = Column(String, index=True, nullable=False)
+   email = Column(String, index=True, nullable=False)
+   password = Column(String, nullable=False)
+   created_at = Column(DateTime, default=datetime.utcnow)
+
+   # relationship to urls 
+   urls = relationship('Url', back_populates="owner")
+
+
 class Url(Base):
    __tablename__ = 'urls'
 
@@ -22,15 +36,3 @@ class Url(Base):
    owner = relationship('User', back_populates="urls")
 
 # users
-class User(Base):
-   __tablename__ = "users"
-
-   id = Column(Integer, primary_key=True, index=True, nullable=False)
-   username = Column(String, index=True, nullable=False)
-   email = Column(String, index=True, nullable=False)
-   password = Column(String, nullable=False)
-   created_at = Column(DateTime, default=datetime.utcnow)
-
-   # relationship to urls 
-   urls = relationship('Url', back_populates="owner")
-

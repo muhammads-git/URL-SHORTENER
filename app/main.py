@@ -103,10 +103,11 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     check rate limit
     if true allow or block request
     """
-    # fettch user_id from getcurrentuser function if is
-    # or
-    # use client_ip for identifier
-    user_id = db.query(User.id).filter(User.username == current_user).first()
+    # user_id = db.query(User.id).filter(User.username == current_user).scalar()
+    res= db.execute(text("SELECT id from users where username=:usernmae"),{
+        'username':current_user
+    })
+    user_id = res.fetchone()[0]
     checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
     if not current_user:
@@ -114,10 +115,8 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     
     # fetch currect user id from db
     user_id = db.query(User.id).filter(User.username == current_user).first()
+    print(user_id)
 
-    # if not user_id :
-    #     raise HTTPException(status_code=404,detail='User id not found!')
-    
     
     """ 
         genrate short code, 
@@ -157,11 +156,14 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
 
 @app.get('/analytics')
 def analytics(request: Request,db: Session = Depends(get_db),current_user = Depends(getCurrentUser)):
-    # first() returns a ORM obj. so we can access data by . DOT
+
     user_id = db.query(User).filter(User.username == current_user).first()
+    print(user_id[0])
 
     if not  user_id:
         raise HTTPException(status_code=404, detail='user_id not found!')
+    
+    checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
     data = db.query(Url.longUrl,Url.shortUrl,Url.clicks).filter(Url.user_id == user_id).all()
     
@@ -201,7 +203,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
     
-    if url_entry.expires_at < datetime.now(timezone.utc):
+    if url_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410, detail='Link has been expired!')
 
     
