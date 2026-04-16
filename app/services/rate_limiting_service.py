@@ -7,7 +7,8 @@ from app.models import User
 redis_client = Redis(
    host='localhost',
    port=6379,
-   decode_responses=True
+   decode_responses=True # this is because redis returns data in bytes so when use this parameter it
+   # automatically turns bytes into string... default
 )
 
 

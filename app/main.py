@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.schedular.background_job import startSchedular,shutdownSchedular
 import atexit
 from app.services.rate_limiting_service import checkRateLimit
+from app.services.rate_limiting_service import redis_client
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -89,6 +90,7 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     if not user or not checkPassword(user_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     # create token
     accessToken = createAccessToken(data={'sub':user.password})
    # return access token and its type
@@ -103,11 +105,11 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     check rate limit
     if true allow or block request
     """
-    # user_id = db.query(User.id).filter(User.username == current_user).scalar()
-    res= db.execute(text("SELECT id from users where username=:usernmae"),{
-        'username':current_user
-    })
-    user_id = res.fetchone()[0]
+    user_id = db.query(User.id).filter(User.username == current_user).first()
+    # res= db.execute(text("SELECT id from users where username=:username"),{
+    #     'username':current_user
+    # })
+    # user_id = res.fetchone()[0]
     checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
     if not current_user:
@@ -151,7 +153,6 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
 
 """
     get/analytics
-
 """
 
 @app.get('/analytics')
@@ -198,6 +199,16 @@ def analytics(request: Request,db: Session = Depends(get_db),current_user = Depe
 
 @app.get('/{short_code}')
 def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
+    """  
+    apply reddis layer before db:
+    if find in reddis redirct to long url:
+    if not just go then to db find -> save to reddis now. 
+    """
+    # reddis layer
+    url = redis_client.get(short_code)
+    if url:
+        return RedirectResponse(url) 
+    
     url_entry = db.query(Url).filter(Url.shortUrl == short_code).first()  # ← shortUrl
     
     if not url_entry:
@@ -205,12 +216,18 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     
     if url_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410, detail='Link has been expired!')
-
+    # calculate expiry of url
+    time_remaining = (url_entry.expires_at - datetime.utcnow()).total_seconds()
+    
+    # save to redis
+    key_val = redis_client.setex(f'short_code:{short_code}',int(time_remaining),url_entry.longUrl)
+    print(key_val)
     
     """
     now increment in clicks
     to track the url visitors... 
     """
+    
     url_entry.clicks += 1
     db.commit() # commit
 
