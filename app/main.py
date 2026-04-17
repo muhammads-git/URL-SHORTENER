@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
 # from pydantic import BaseModel
 from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
@@ -15,6 +15,8 @@ from app.schedular.background_job import startSchedular,shutdownSchedular
 import atexit
 from app.services.rate_limiting_service import checkRateLimit
 from app.services.rate_limiting_service import redis_client
+from app.services.qrcode import QRCODE
+import io
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -227,10 +229,43 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     now increment in clicks
     to track the url visitors... 
     """
-    
+
     url_entry.clicks += 1
     db.commit() # commit
 
     url = url_entry.longUrl 
 
     return RedirectResponse(url)
+
+
+
+# qr code generator 
+
+@app.get('/qrcode/{short_code}')
+def qr_code(short_code : str, request : Request, db : Session = Depends(get_db)):
+
+    """ Args* :
+            short_code: takes short_code as a parameter
+        Returns* :
+            generates qrcode for it..
+    """
+
+    url = db.query(Url).filter(Url.shortUrl == short_code).first()
+
+    if not url:
+        raise HTTPException(status_code=404,detail='url not found')
+    if url.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=410,detail='url has expired!')
+    
+    # generate qrcode
+    qrcode = QRCODE()
+
+    qr_code_img = qrcode.generateQRcode(url.longUrl)
+    # now i need to return image
+    buf = io.BytesIO()
+    qr_code_img.save(buf, format="PNG")
+
+    # reset buffer cursor to the  0 otherwise the read pointer is at the end
+    buf.seek(0)
+
+    return StreamingResponse(buf, media_type='image/png')
