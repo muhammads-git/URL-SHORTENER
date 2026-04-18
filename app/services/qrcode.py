@@ -11,8 +11,6 @@ class QRCODE:
       qrcode = qr.make(url)
       return qrcode
    
-   # def saveQrcode(qrcode):
-   #    qrcode.save('')
    
 
    

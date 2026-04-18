@@ -249,7 +249,7 @@ def qr_code(short_code : str, request : Request, db : Session = Depends(get_db))
         Returns* :
             generates qrcode for it..
     """
-
+    
     url = db.query(Url).filter(Url.shortUrl == short_code).first()
 
     if not url:
@@ -257,12 +257,15 @@ def qr_code(short_code : str, request : Request, db : Session = Depends(get_db))
     if url.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410,detail='url has expired!')
     
-    # generate qrcode
+    # create instance
     qrcode = QRCODE()
-
+    # generate qrcode
     qr_code_img = qrcode.generateQRcode(url.longUrl)
-    # now i need to return image
+
+    # create instance of buff i.e memory in RAM
     buf = io.BytesIO()
+
+    # write into buff
     qr_code_img.save(buf, format="PNG")
 
     # reset buffer cursor to the  0 otherwise the read pointer is at the end
