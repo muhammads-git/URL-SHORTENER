@@ -22,6 +22,7 @@ A high-performance, production-ready REST API built with FastAPI that transforms
 **URL Shortener API** is a modern REST API that simplifies URL management by:
 - Converting lengthy URLs into short, memorable codes
 - Tracking click analytics and user engagement
+- Used redis cache for storing long urls, for a faster redirect.
 - Managing link lifecycle with automatic expiration
 - Implementing intelligent rate limiting to prevent abuse
 - Providing comprehensive user authentication

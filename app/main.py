@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
-from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse,Response
 # from pydantic import BaseModel
 from app.utils import GenerateShortCode
 from app.database import engine, Base, get_db
@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.schedular.background_job import startSchedular,shutdownSchedular
 import atexit
 from app.services.rate_limiting_service import checkRateLimit
-from app.services.rate_limiting_service import redis_client
+from app.services.rate_limiting_service import redis_client,redis_binary
 from app.services.qrcode import QRCODE
 import io
 
@@ -242,14 +242,15 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
 # qr code generator 
 
 @app.get('/qrcode/{short_code}')
-def qr_code(short_code : str, request : Request, db : Session = Depends(get_db)):
+def qr_code(short_code : str, db : Session = Depends(get_db)):
 
     """ Args* :
             short_code: takes short_code as a parameter
         Returns* :
             generates qrcode for it..
     """
-    
+
+
     url = db.query(Url).filter(Url.shortUrl == short_code).first()
 
     if not url:
@@ -259,6 +260,17 @@ def qr_code(short_code : str, request : Request, db : Session = Depends(get_db))
     
     # create instance
     qrcode = QRCODE()
+
+    img_bytes = redis_binary.get(f'short_code:{short_code}')
+
+    if img_bytes:
+        return Response(
+        content=img_bytes,
+        media_type="image/png",
+        headers={"Content-Type": "image/png"}
+    )
+    
+    
     # generate qrcode
     qr_code_img = qrcode.generateQRcode(url.longUrl)
 
@@ -268,6 +280,10 @@ def qr_code(short_code : str, request : Request, db : Session = Depends(get_db))
     # write into buff
     qr_code_img.save(buf, format="PNG")
 
+    # find the remainng time of link expiration?
+    time_remaining = (url.expires_at - datetime.now()).total_seconds()
+    # if not save to reddis
+    redis_binary.setex(f'short_code:{short_code}',int(time_remaining),buf.getvalue())
     # reset buffer cursor to the  0 otherwise the read pointer is at the end
     buf.seek(0)
 
