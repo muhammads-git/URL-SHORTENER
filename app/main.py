@@ -108,10 +108,7 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     if true allow or block request
     """
     user_id = db.query(User.id).filter(User.username == current_user).first()
-    # res= db.execute(text("SELECT id from users where username=:username"),{
-    #     'username':current_user
-    # })
-    # user_id = res.fetchone()[0]
+    # rate limit layer......
     checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
     if not current_user:
