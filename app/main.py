@@ -20,15 +20,15 @@ import io
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
-def getCurrentUser(token: str = Depends(oauth2_scheme)):
-    username = decodeToken(token)
-    if not username:
-        raise HTTPException(
-            status_code=404,
-            detail='Invalid Token or no such user found'
-        )
-    else:
-        return username
+# def getCurrentUser(token: str = Depends(oauth2_scheme)):
+#     username = decodeToken(token)
+#     if not username:
+#         raise HTTPException(
+#             status_code=404,
+#             detail='Invalid Token or no such user found'
+#         )
+#     else:
+#         return username
 
 
 # set up FASTAPI instance
@@ -42,6 +42,20 @@ atexit.register(lambda: shutdownSchedular(schedular))
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
+# get current user
+def getCurrentUser(token: str = Depends(oauth2_scheme)):
+    username = decodeToken(token)
+    if not username:
+        raise HTTPException(
+            status_code=404,
+            detail='Invalid Token or no such user found'
+        )
+    else:
+        return username
 
 @app.get('/')
 async def hello( request: Request):
@@ -94,7 +108,7 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # create token
-    accessToken = createAccessToken(data={'sub':user.password})
+    accessToken = createAccessToken(data={'sub':user.username})
    # return access token and its type
     return {'access_token': accessToken, 'token_type': 'bearer'}
 
@@ -109,14 +123,14 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     """
     user_id = db.query(User.id).filter(User.username == current_user).first()
     # rate limit layer......
-    checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
+    checkRateLimit(request,user_id=user_id[0], max_req=5, time_window=60)
     
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
-    # fetch currect user id from db
-    user_id = db.query(User.id).filter(User.username == current_user).first()
-    print(user_id)
+    # # fetch currect user id from db
+    # user_id = db.query(User.id).filter(User.username == current_user).first()
+    # print(user_id)
 
     
     """ 
@@ -137,7 +151,7 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
         shortUrl=short_code,    # ← shortUrl
         longUrl=long_url,
         expires_at = valid_days,
-        user_id=user_id
+        user_id=user_id[0]
     )
     db.add(db_url)   # // insertion in db
     db.commit()   # //
@@ -156,19 +170,15 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
 
 @app.get('/analytics')
 def analytics(request: Request,db: Session = Depends(get_db),current_user = Depends(getCurrentUser)):
-
-    user_id = db.query(User).filter(User.username == current_user).first()
-    print(user_id[0])
-
-    if not  user_id:
+    user_id = db.query(User.id).filter(User.username == current_user).first()
+    if not user_id:
         raise HTTPException(status_code=404, detail='user_id not found!')
-    
+    # rate limit layer
     checkRateLimit(request,user_id=user_id, max_req=5, time_window=60)
     
-    data = db.query(Url.longUrl,Url.shortUrl,Url.clicks).filter(Url.user_id == user_id).all()
-    
+    data = db.query(Url.longUrl,Url.shortUrl,Url.clicks).filter(Url.user_id == user_id[0]).all()
     if not data:
-        raise HTTPException(detail='No data found!')
+        raise HTTPException(status_code=404,detail='No data found!')
     
     # " turn this list of tuples into list of dictionary to access it easily"
     list_data = []

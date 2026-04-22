@@ -44,23 +44,17 @@ def createAccessToken(data: dict, expires_delta: timedelta = None):
     Returns:
         Encoded JWT token string
     """
-     
+
      
     toEncode = data.copy()
-
-    # Set expiry time
-
-   #  if expires_delta:
-   #     expire = datetime.utcnow() + expires_delta
-   #  else:
+    # set expiry
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
     # add to existing dict
     toEncode.update({'exp':expire})
 
     # create token
     encodedJWT = jwt.encode(toEncode, SECRET_KEY, algorithm=ALGORITHM)
-    print("Encoded tokens: ", encodedJWT) 
+    # print("Encoded tokens: ", encodedJWT) 
     return encodedJWT
 
 def decodeToken(token: str):
