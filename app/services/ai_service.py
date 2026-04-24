@@ -7,8 +7,6 @@ load_dotenv()
 
 # 1. Initialize Client ONCE globally (Efficient)
 client = AsyncGroq(api_key=os.getenv('GROQ_API_KEY'))
-
-
 async def generate_slugs(description: str):
    """
    Takes a website description and returns 3 short slugs.
@@ -28,6 +26,7 @@ async def generate_slugs(description: str):
          model='llama-3.3-70b-versatile',
          response_format={"type": "json_object"} # Force JSON so your code can read it
       )
+      """ Parse the response into a string before passing over to /endpoints """
       # parse json to python dictionary
       data_dict = json.loads(chat_completion.choices[0].message.content)
       # get the key slugs

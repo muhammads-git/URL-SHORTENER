@@ -242,7 +242,6 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     
     # save to redis
     key_val = redis_client.setex(f'short_code:{short_code}',int(time_remaining),url_entry.longUrl)
-    print(key_val)
     
     """
     now increment in clicks
