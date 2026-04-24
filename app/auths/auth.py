@@ -76,7 +76,6 @@ def decodeToken(token: str):
     except JWTError:
        return None
     
-
 def getTokenExpiration():
    """ helper to get DEFAULT expiration time """
    return datetime.utcnow + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

@@ -17,6 +17,8 @@ from app.services.rate_limiting_service import checkRateLimit
 from app.services.rate_limiting_service import redis_client,redis_binary
 from app.services.qrcode import QRCODE
 import io
+from app.services.ai_service import generate_slugs
+from app.services.scraper_service import get_page_title
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -116,7 +118,7 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 #             SHORTENER             #
 @app.post('/url_shortener')
-def create_short_url(request: Request, long_url: str = Form(...), valid_days : int = Form(30) , db: Session = Depends(get_db), current_user = Depends(getCurrentUser)):
+async def create_short_url(request: Request, long_url: str = Form(...), valid_days : int = Form(30) , db: Session = Depends(get_db), current_user = Depends(getCurrentUser)):
     """
     check rate limit
     if true allow or block request
@@ -128,21 +130,31 @@ def create_short_url(request: Request, long_url: str = Form(...), valid_days : i
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
-    # # fetch currect user id from db
-    # user_id = db.query(User.id).filter(User.username == current_user).first()
-    # print(user_id)
+    
+    # before generating shortcode lets have a AI layer   
+    json_response = await get_page_title(long_url)
+    # call ai to get short slug
+    url_slug = await generate_slugs(json_response)
 
-    
-    """ 
-        genrate short code, 
-        then check if the same code already exists
-     """
-    short_code = GenerateShortCode()
-    
-    # Check if code already exists
-    while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
+    if url_slug:
+        short_code = url_slug
+        # what if short_slug is in db...
+        # if in db then call generateshortcode here to avoid using ai for reducing extra usage of tokens
+        slug = db.query(Url).filter(Url.shortUrl == short_code).first()
+        if slug:
+            short_code = GenerateShortCode()
+    else: 
+        """ 
+            genrate short code, 
+            then check if the same code already exists
+        """
         short_code = GenerateShortCode()
-    
+        
+        # Check if code already exists
+        while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
+            short_code = GenerateShortCode()
+
+    print(short_code)
     # expires at this..
     valid_days = datetime.utcnow() + timedelta(days=valid_days)
     
