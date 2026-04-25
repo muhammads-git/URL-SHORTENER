@@ -12,13 +12,14 @@ async def get_page_title(url: str) -> str:
     }
     
     try:
+        # asynchrounus requests to urls to handle scale times load
         async with httpx.AsyncClient(follow_redirects=True, timeout=5.0) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status() # Check for 404 errors
-            
+
             # Parse HTML
-            soup = BeautifulSoup(response.text, "html.parser")
-            print(soup.title)
+            soup = BeautifulSoup(response.text,'html.parser')
+            # print(soup.contents)
             # Return the title if it exists, or a fallback
             if soup.title and soup.title.string:
                 return soup.title.string.strip()
