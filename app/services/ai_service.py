@@ -7,6 +7,7 @@ load_dotenv()
 
 # 1. Initialize Client ONCE globally (Efficient)
 client = AsyncGroq(api_key=os.getenv('GROQ_API_KEY'))
+
 async def generate_slugs(description: str):
    """
    Takes a website description and returns 3 short slugs.

@@ -13,6 +13,10 @@ def GenerateShortCode(length=6):
 
 
 
+def GenerateTempCode(lenght=4):
+   chars = string.ascii_letters + string.digits
+   code = 'tmp-'+''.join(random.choices(chars,k=lenght))
+   return code
 
-
+print(GenerateTempCode())
    

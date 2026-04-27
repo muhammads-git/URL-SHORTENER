@@ -10,6 +10,7 @@ redis_client = Redis(
    decode_responses=True # this is because redis returns data in bytes so when use this parameter it
    # automatically turns bytes into string... default
 )
+# binary for images
 redis_binary = Redis(
    host='localhost',
    port=6379,

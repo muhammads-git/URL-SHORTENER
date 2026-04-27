@@ -115,7 +115,6 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {'access_token': accessToken, 'token_type': 'bearer'}
 
 
-
 #             SHORTENER             #
 @app.post('/url_shortener')
 async def create_short_url(request: Request, long_url: str = Form(...), valid_days : int = Form(30) , db: Session = Depends(get_db), current_user = Depends(getCurrentUser)):
@@ -130,6 +129,11 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
+
+    """
+    Here, We will generate random temperory code to return this to user immedietly,
+    check if already available in db... if available re make the code
+    """
     
     # before generating shortcode lets have a AI layer   
     json_response = await get_page_title(long_url)
