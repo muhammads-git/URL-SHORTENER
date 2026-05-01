@@ -19,6 +19,9 @@ from app.services.qrcode import QRCODE
 import io
 from app.services.ai_service import generate_slugs
 from app.services.scraper_service import get_page_title
+from arq import create_pool
+from arq.connections import RedisSettings
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 # get current user
@@ -134,31 +137,13 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     Here, We will generate random temperory code to return this to user immedietly,
     check if already available in db... if available re make the code
     """
-    
-    # before generating shortcode lets have a AI layer   
-    json_response = await get_page_title(long_url)
-    # call ai to get short slug
-    url_slug = await generate_slugs(json_response)
-
-    if url_slug:
-        short_code = url_slug
-        # what if short_slug is in db...
-        # if in db then call generateshortcode here to avoid using ai for reducing extra usage of tokens
-        slug = db.query(Url).filter(Url.shortUrl == short_code).first()
-        if slug:
-            short_code = GenerateShortCode()
-    else: 
-        """ 
-            genrate short code, 
-            then check if the same code already exists
-        """
-        short_code = GenerateShortCode()
+    short_code = GenerateShortCode()
         
-        # Check if code already exists
-        while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
-            short_code = GenerateShortCode()
+    # Check if code already exists
+    while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
+        short_code = GenerateShortCode()
 
-    print(short_code)
+    
     # expires at this..
     valid_days = datetime.utcnow() + timedelta(days=valid_days)
     
@@ -172,7 +157,20 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     db.add(db_url)   # // insertion in db
     db.commit()   # //
     db.refresh(db_url)
-    
+
+    # now here we call the Queue [Worker]
+    # hey, worker here is the short random code 
+    # turn it into a ai slug when you have time
+    try:
+        print('Short code generated, Calling Redis [Queue Worker].... ')
+        redis = await create_pool(RedisSettings(host='127.0.0.1',port=6379))
+        await redis.enqueue_job('upgradeLinkTask',tmp_code=short_code,long_url=long_url)
+        await redis.close()
+    except Exception as e:
+        print(f"Redis failed: {e}. User still gets working random link.")
+
+
+    # return < 50ms    
     return {
         'shortUrl': f'http://localhost:8000/{short_code}',
         'code': short_code,
@@ -180,9 +178,7 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
 
     }
 
-"""
-    get/analytics
-"""
+
 
 @app.get('/analytics')
 def analytics(request: Request,db: Session = Depends(get_db),current_user = Depends(getCurrentUser)):
