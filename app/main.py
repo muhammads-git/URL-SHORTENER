@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse,Response
 # from pydantic import BaseModel
-from app.utils import GenerateShortCode
+from app.utils import GenerateShortCode,GenerateTemperoryCode
 from app.database import engine, Base, get_db
 from app.models import Url, User
 from sqlalchemy.orm import Session 
@@ -22,18 +22,6 @@ from app.services.scraper_service import get_page_title
 from arq import create_pool
 from arq.connections import RedisSettings
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
-# get current user
-# def getCurrentUser(token: str = Depends(oauth2_scheme)):
-#     username = decodeToken(token)
-#     if not username:
-#         raise HTTPException(
-#             status_code=404,
-#             detail='Invalid Token or no such user found'
-#         )
-#     else:
-#         return username
 
 
 # set up FASTAPI instance
@@ -137,11 +125,11 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     Here, We will generate random temperory code to return this to user immedietly,
     check if already available in db... if available re make the code
     """
-    short_code = GenerateShortCode()
+    short_code = GenerateTemperoryCode()
         
     # Check if code already exists
     while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
-        short_code = GenerateShortCode()
+        short_code = GenerateTemperoryCode()
 
     
     # expires at this..
