@@ -1,7 +1,7 @@
 import asyncio
 from arq.connections import RedisSettings
 from arq import create_pool
-
+from fastapi import HTTPException
 from app.models import Url,User
 from app.database import SessionLocal
 from app.services.ai_service import generate_slugs
@@ -40,6 +40,26 @@ async def upgradeLinkTask(ctx,tmp_code,long_url):
             db.commit()
          else:
                 print("[Worker] Could not find original link! Weird.")
+   finally:
+      db.close()
+
+
+# track clicks
+
+async def trackClickTask(ctx,short_code):
+   """ let the queue do this.."""
+   # private db session
+   db = SessionLocal()
+
+   try:
+      url = db.query(Url).filter(Url.shortUrl == short_code).first()
+      if url:
+         print(f"[Worker] 🔄 Tracking -> {short_code}")
+         # update the click
+         url.clicks += 1
+      else:
+         print("[Worker] Could not find original link to track clicks! Weird.")
+         raise HTTPException(status_code=404)
    finally:
       db.close()
 

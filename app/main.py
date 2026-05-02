@@ -207,7 +207,7 @@ def analytics(request: Request,db: Session = Depends(get_db),current_user = Depe
 }
 
 @app.get('/{short_code}')
-def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
+async def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     """  
     apply reddis layer before db:
     if find in reddis redirct to long url:
@@ -235,9 +235,15 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     now increment in clicks
     to track the url visitors... 
     """
+    # call Worker Queue to trackclicks
+    try:
+        redis = await create_pool(RedisSettings(host='127.0.0.1',port=6379))
+        await redis.enqueue_job('trackClickTask',short_code=short_code)
+        await redis.close()
+    except Exception as e:
+        print(f'Error calling redis Queue... {e}')
+        print('Redis failed!')
 
-    url_entry.clicks += 1
-    db.commit() # commit
 
     url = url_entry.longUrl 
 
