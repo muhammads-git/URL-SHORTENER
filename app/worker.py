@@ -57,6 +57,7 @@ async def trackClickTask(ctx,short_code):
          print(f"[Worker] 🔄 Tracking -> {short_code}")
          # update the click
          url.clicks += 1
+         db.commit()
       else:
          print("[Worker] Could not find original link to track clicks! Weird.")
          raise HTTPException(status_code=404)
@@ -66,4 +67,4 @@ async def trackClickTask(ctx,short_code):
 
 class WorkerSettings:
    redis_settings = RedisSettings(host='127.0.0.1',port=6379)
-   functions = [upgradeLinkTask]
+   functions = [upgradeLinkTask,trackClickTask]

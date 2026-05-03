@@ -21,11 +21,11 @@ from app.services.ai_service import generate_slugs
 from app.services.scraper_service import get_page_title
 from arq import create_pool
 from arq.connections import RedisSettings
-
+from app.lifespan import lifespan
 
 
 # set up FASTAPI instance
-app = FastAPI(title='URL SHORTENER')
+app = FastAPI(title='URL SHORTENER',lifespan=lifespan)
 
 # start schedular
 schedular = startSchedular()
@@ -151,7 +151,8 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     # turn it into a ai slug when you have time
     try:
         print('Short code generated, Calling Redis [Queue Worker].... ')
-        redis = await create_pool(RedisSettings(host='127.0.0.1',port=6379))
+        # connect to redis via request obj
+        redis = request.app.state.redis
         await redis.enqueue_job('upgradeLinkTask',tmp_code=short_code,long_url=long_url)
         await redis.close()
     except Exception as e:
@@ -207,7 +208,7 @@ def analytics(request: Request,db: Session = Depends(get_db),current_user = Depe
 }
 
 @app.get('/{short_code}')
-async def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
+async def redirect_to_url(request:Request,short_code: str, db: Session = Depends(get_db)):
     """  
     apply reddis layer before db:
     if find in reddis redirct to long url:
@@ -235,9 +236,11 @@ async def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     now increment in clicks
     to track the url visitors... 
     """
+
     # call Worker Queue to trackclicks
     try:
-        redis = await create_pool(RedisSettings(host='127.0.0.1',port=6379))
+        # access connection via request obj
+        redis = request.app.state.redis
         await redis.enqueue_job('trackClickTask',short_code=short_code)
         await redis.close()
     except Exception as e:
@@ -248,8 +251,6 @@ async def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     url = url_entry.longUrl 
 
     return RedirectResponse(url)
-
-
 
 # qr code generator 
 
