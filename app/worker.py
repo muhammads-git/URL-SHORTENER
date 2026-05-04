@@ -6,6 +6,12 @@ from app.models import Url,User
 from app.database import SessionLocal
 from app.services.ai_service import generate_slugs
 from app.services.scraper_service import get_page_title
+import string,random
+
+# generates suffix
+def GenerateShortSuffix(length=4):
+   chars = string.ascii_letters + string.digits
+   return ''.join(random.choices(chars, k=length))
 
 
 async def upgradeLinkTask(ctx,tmp_code,long_url):
@@ -30,16 +36,20 @@ async def upgradeLinkTask(ctx,tmp_code,long_url):
       if existingCode:
          # code exist either recall ai or keep the random
          print(f'Slug already taken...')
+         # generate suffix
+         suffix = GenerateShortSuffix()
+         # concatenate with slug
+         ai_slug =f'{ai_slug}-{suffix}'
+         print(f'suffixed slug {ai_slug}')
       
-      else:
-         temperoryCode = db.query(Url).filter(Url.shortUrl == tmp_code).first()
-         if temperoryCode:
-            print(f"[Worker] 🔄 Upgrading {tmp_code} -> {ai_slug}")
+      temperoryCode = db.query(Url).filter(Url.tmp_code == tmp_code).first()
+      if temperoryCode:
+         print(f"[Worker] 🔄 Creating slug for -> {tmp_code} = {ai_slug}")
             # update the code to short slug ai generated
-            temperoryCode.shortUrl = ai_slug
-            db.commit()
-         else:
-                print("[Worker] Could not find original link! Weird.")
+         temperoryCode.shortUrl = ai_slug
+         db.commit()
+      else:
+            print("[Worker] Could not find original link! Weird.")
    finally:
       db.close()
 
@@ -52,9 +62,9 @@ async def trackClickTask(ctx,short_code):
    db = SessionLocal()
 
    try:
-      url = db.query(Url).filter(Url.shortUrl == short_code).first()
+      url = db.query(Url).filter(Url.tmp_code == short_code).first()
       if url:
-         print(f"[Worker] 🔄 Tracking -> {short_code}")
+         print(f"[Worker] 🔄 Tracking -> {short_code} +1 is incremented.")
          # update the click
          url.clicks += 1
          db.commit()

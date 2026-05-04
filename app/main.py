@@ -107,7 +107,7 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 #             SHORTENER             #
-@app.post('/url_shortener')
+@app.post('/url')
 async def create_short_url(request: Request, long_url: str = Form(...), valid_days : int = Form(30) , db: Session = Depends(get_db), current_user = Depends(getCurrentUser)):
     """
     check rate limit
@@ -137,7 +137,7 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     
     # Save to database
     db_url = Url(
-        shortUrl=short_code,    # ← shortUrl
+        tmp_code=short_code,    # ← shortUrl
         longUrl=long_url,
         expires_at = valid_days,
         user_id=user_id[0]
@@ -162,7 +162,7 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     # return < 50ms    
     return {
         'shortUrl': f'http://localhost:8000/{short_code}',
-        'code': short_code,
+        'temperory_code': short_code,
         'longUrl': long_url
 
     }
@@ -209,8 +209,7 @@ def analytics(request: Request,db: Session = Depends(get_db),current_user = Depe
 
 @app.get('/{short_code}')
 async def redirect_to_url(request:Request,short_code: str, db: Session = Depends(get_db)):
-    """  
-    apply reddis layer before db:
+    """  apply reddis layer before db:
     if find in reddis redirct to long url:
     if not just go then to db find -> save to reddis now. 
     """
@@ -219,11 +218,10 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     if url:
         return RedirectResponse(url) 
     
-    url_entry = db.query(Url).filter(Url.shortUrl == short_code).first()  # ← shortUrl
-    
+    url_entry = db.query(Url).filter(Url.tmp_code == short_code).first()  # ← shortUrl
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
-    
+    # check expiry
     if url_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410, detail='Link has been expired!')
     # calculate expiry of url
@@ -232,11 +230,6 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     # save to redis
     key_val = redis_client.setex(f'short_code:{short_code}',int(time_remaining),url_entry.longUrl)
     
-    """
-    now increment in clicks
-    to track the url visitors... 
-    """
-
     # call Worker Queue to trackclicks
     try:
         # access connection via request obj
@@ -247,13 +240,14 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
         print(f'Error calling redis Queue... {e}')
         print('Redis failed!')
 
+    if url_entry.tmp_code and url_entry.shortUrl:
+        return RedirectResponse(f'/{url_entry.shortUrl}')
+    
+    # url = url_entry.longUrl 
 
-    url = url_entry.longUrl 
-
-    return RedirectResponse(url)
+    return RedirectResponse(url_entry.longUrl)
 
 # qr code generator 
-
 @app.get('/qrcode/{short_code}')
 def qr_code(short_code : str, db : Session = Depends(get_db)):
 
