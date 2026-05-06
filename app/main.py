@@ -93,6 +93,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 @app.post('/login')
 def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # now the OAuth2PasswordRequestForm will automatically handle forms
+    print('i am hitting your login for authentication....')
     user = db.query(User).filter(
         (user_data.username == User.username)
     ).first()
@@ -213,17 +214,22 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     if find in reddis redirct to long url:
     if not just go then to db find -> save to reddis now. 
     """
+    print('Hitting redis....')
     # reddis layer
     url = redis_client.get(short_code)
     if url:
         return RedirectResponse(url) 
     
-    url_entry = db.query(Url).filter(Url.tmp_code == short_code).first()  # ← shortUrl
+    print('Hitting db....')
+
+    url_entry = db.query(Url).filter((Url.tmp_code == short_code) | (Url.shortUrl == short_code)).first()  # ← shortUrl
     if not url_entry:
         raise HTTPException(status_code=404, detail='URL not found')
+    
     # check expiry
     if url_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410, detail='Link has been expired!')
+    
     # calculate expiry of url
     time_remaining = (url_entry.expires_at - datetime.utcnow()).total_seconds()
     
@@ -240,8 +246,9 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
         print(f'Error calling redis Queue... {e}')
         print('Redis failed!')
 
+    
     if url_entry.tmp_code and url_entry.shortUrl:
-        return RedirectResponse(f'/{url_entry.shortUrl}')
+        return RedirectResponse(f'/{url_entry.shortUrl}',status_code=301)
     
     # url = url_entry.longUrl 
 
@@ -256,7 +263,6 @@ def qr_code(short_code : str, db : Session = Depends(get_db)):
         Returns* :
             generates qrcode for it..
     """
-
 
     url = db.query(Url).filter(Url.shortUrl == short_code).first()
 
