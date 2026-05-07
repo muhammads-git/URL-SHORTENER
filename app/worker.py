@@ -62,15 +62,16 @@ async def trackClickTask(ctx,short_code):
    db = SessionLocal()
 
    try:
-      url = db.query(Url).filter(Url.tmp_code == short_code).first()
+      url = db.query(Url).filter(
+               (Url.tmp_code == short_code) | (Url.shortUrl == short_code)).first()
       if url:
+
          print(f"[Worker] 🔄 Tracking -> {short_code} +1 is incremented.")
          # update the click
          url.clicks += 1
          db.commit()
       else:
          print("[Worker] Could not find original link to track clicks! Weird.")
-         raise HTTPException(status_code=404)
    finally:
       db.close()
 

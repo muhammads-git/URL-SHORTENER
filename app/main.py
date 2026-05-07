@@ -216,7 +216,7 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     """
     print('Hitting redis....')
     # reddis layer
-    url = redis_client.get(short_code)
+    url = redis_client.get(f'short_code:{short_code}')
     if url:
         return RedirectResponse(url) 
     
@@ -230,25 +230,22 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     if url_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410, detail='Link has been expired!')
     
-    # calculate expiry of url
+    # Write to cache with remaining TTL
     time_remaining = (url_entry.expires_at - datetime.utcnow()).total_seconds()
-    
-    # save to redis
     key_val = redis_client.setex(f'short_code:{short_code}',int(time_remaining),url_entry.longUrl)
     
-    # call Worker Queue to trackclicks
+    # call Worker Queue to trackclicks (fire and forget)
     try:
         # access connection via request obj
         redis = request.app.state.redis
         await redis.enqueue_job('trackClickTask',short_code=short_code)
-        await redis.close()
     except Exception as e:
         print(f'Error calling redis Queue... {e}')
         print('Redis failed!')
 
     
     if url_entry.tmp_code and url_entry.shortUrl:
-        return RedirectResponse(f'/{url_entry.shortUrl}',status_code=301)
+        return RedirectResponse(f'/{url_entry.longUrl}',status_code=301)
     
     # url = url_entry.longUrl 
 
