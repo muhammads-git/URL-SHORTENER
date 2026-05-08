@@ -114,13 +114,12 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     check rate limit
     if true allow or block request
     """
-    user_id = db.query(User.id).filter(User.username == current_user).first()
-    # rate limit layer......
-    checkRateLimit(request,user_id=user_id[0], max_req=5, time_window=60)
-    
     if not current_user:
         raise HTTPException(status_code=401, detail='No user found, Login first!')
     
+    user_id = db.query(User.id).filter(User.username == current_user).first()
+    # rate limit layer......
+    checkRateLimit(request,user_id=user_id[0], max_req=5, time_window=60)
 
     """
     Here, We will generate random temperory code to return this to user immedietly,
@@ -244,12 +243,12 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
         print('Redis failed!')
 
     
-    if url_entry.tmp_code and url_entry.shortUrl:
-        return RedirectResponse(f'/{url_entry.longUrl}',status_code=301)
+    if url_entry.tmp_code or url_entry.shortUrl:
+        return RedirectResponse(f'/{url_entry.longUrl}')
     
     # url = url_entry.longUrl 
 
-    return RedirectResponse(url_entry.longUrl)
+    # return RedirectResponse(url_entry.longUrl)
 
 # qr code generator 
 @app.get('/qrcode/{short_code}')

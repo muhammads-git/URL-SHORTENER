@@ -5,14 +5,14 @@ from app.models import User
 # from app.main import getCurrentUser
 
 redis_client = Redis(
-   host='localhost',
+   host='127.0.0.1',
    port=6379,
    decode_responses=True # this is because redis returns data in bytes so when use this parameter it
    # automatically turns bytes into string... default
 )
 # binary for images
 redis_binary = Redis(
-   host='localhost',
+   host='127.0.0.1',
    port=6379,
    decode_responses=False
 )
