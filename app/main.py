@@ -126,7 +126,8 @@ async def create_short_url(request: Request, long_url: str = Form(...), valid_da
     check if already available in db... if available re make the code
     """
     short_code = GenerateTemperoryCode()
-        
+    
+    # this is worst condtion while loop is bomb for db -> replace come up with a optimized solution...
     # Check if code already exists
     while db.query(Url).filter(Url.shortUrl == short_code).first():  # ← shortUrl
         short_code = GenerateTemperoryCode()
@@ -214,12 +215,16 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     if not just go then to db find -> save to reddis now. 
     """
     print('Hitting redis....')
-    # reddis layer
-    url = redis_client.get(f'short_code:{short_code}')
-    if url:
-        return RedirectResponse(url) 
+    # reddis layer 1
+    row_id = redis_client.get(f'lookup:{short_code}') # short_code : row_id
+    # redis layer 2 
+    if row_id:
+        url = redis_client.get(f'url:{row_id}') # -> row_id : longUrl
+        if url:
+            print('redirecting from redis')
+            return RedirectResponse(url) 
     
-    print('Hitting db....')
+    print('No Match find in Redis. -> Hitting db....')
 
     url_entry = db.query(Url).filter((Url.tmp_code == short_code) | (Url.shortUrl == short_code)).first()  # ← shortUrl
     if not url_entry:
@@ -231,7 +236,10 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     
     # Write to cache with remaining TTL
     time_remaining = (url_entry.expires_at - datetime.utcnow()).total_seconds()
-    key_val = redis_client.setex(f'short_code:{short_code}',int(time_remaining),url_entry.longUrl)
+    # redis layer 1 save short code with id
+    row_id = redis_client.setex(f'lookup:{short_code}',int(time_remaining),url_entry.id)
+    # redis layer 2 save id with URL
+    key_val = redis_client.setex(f'url:{url_entry.id}',int(time_remaining),url_entry.longUrl)
     
     # call Worker Queue to trackclicks (fire and forget)
     try:
@@ -241,14 +249,8 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     except Exception as e:
         print(f'Error calling redis Queue... {e}')
         print('Redis failed!')
-
-    
-    if url_entry.tmp_code or url_entry.shortUrl:
-        return RedirectResponse(f'/{url_entry.longUrl}')
-    
-    # url = url_entry.longUrl 
-
-    # return RedirectResponse(url_entry.longUrl)
+    # redirect to the 
+    return RedirectResponse(url_entry.longUrl)
 
 # qr code generator 
 @app.get('/qrcode/{short_code}')
