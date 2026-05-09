@@ -23,8 +23,8 @@ class Url(Base):
 
    id = Column(Integer, primary_key=True)
    longUrl = Column(String)
-   shortUrl = Column(String, unique=True)
-   tmp_code = Column(String)
+   shortUrl = Column(String, unique=True, index=True)
+   tmp_code = Column(String,index=True)
    clicks = Column(Integer, default=0)
    created_at = Column(DateTime, default=datetime.utcnow)
 

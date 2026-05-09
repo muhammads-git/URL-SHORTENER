@@ -7,6 +7,7 @@ from app.database import SessionLocal
 from app.services.ai_service import generate_slugs
 from app.services.scraper_service import get_page_title
 import string,random
+from app.utils import isTempCode
 
 # generates suffix
 def GenerateShortSuffix(length=4):
@@ -54,16 +55,20 @@ async def upgradeLinkTask(ctx,tmp_code,long_url):
       db.close()
 
 
-# track clicks
 
 async def trackClickTask(ctx,short_code):
    """ let the queue do this.."""
    # private db session
    db = SessionLocal()
-
+   
    try:
-      url = db.query(Url).filter(
-               (Url.tmp_code == short_code) | (Url.shortUrl == short_code)).first()
+      # check if code is temp or slug
+      if isTempCode(short_code):
+         print('checking is tempcode..')
+         url = db.query(Url).filter(Url.tmp_code == short_code).first()
+      else:
+         url = db.query(Url).filter(Url.shortUrl == short_code).first()
+
       if url:
 
          print(f"[Worker] 🔄 Tracking -> {short_code} +1 is incremented.")

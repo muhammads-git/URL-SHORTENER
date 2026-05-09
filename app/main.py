@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse,Response
 # from pydantic import BaseModel
-from app.utils import GenerateShortCode,GenerateTemperoryCode
+from app.utils import GenerateTemperoryCode
 from app.database import engine, Base, get_db
 from app.models import Url, User
 from sqlalchemy.orm import Session 
@@ -208,6 +208,15 @@ def analytics(request: Request,db: Session = Depends(get_db),current_user = Depe
     ]
 }
 
+# fire click tracking function
+async def fireClickTracking(request, short_code):
+    try:
+        redis = request.app.state.redis
+        await redis.enqueue_job('trackClickTask',short_code=short_code)
+    except Exception as e:
+        print(f'Erro calling Queue for tracking Clicks. ->: {e}')
+        print('Redis Failed!')
+
 @app.get('/{short_code}')
 async def redirect_to_url(request:Request,short_code: str, db: Session = Depends(get_db)):
     """  apply reddis layer before db:
@@ -221,6 +230,7 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     if row_id:
         url = redis_client.get(f'url:{row_id}') # -> row_id : longUrl
         if url:
+            await fireClickTracking(request,short_code) # call queue to increment
             print('redirecting from redis')
             return RedirectResponse(url) 
     
@@ -242,13 +252,7 @@ async def redirect_to_url(request:Request,short_code: str, db: Session = Depends
     key_val = redis_client.setex(f'url:{url_entry.id}',int(time_remaining),url_entry.longUrl)
     
     # call Worker Queue to trackclicks (fire and forget)
-    try:
-        # access connection via request obj
-        redis = request.app.state.redis
-        await redis.enqueue_job('trackClickTask',short_code=short_code)
-    except Exception as e:
-        print(f'Error calling redis Queue... {e}')
-        print('Redis failed!')
+    fireClickTracking(request,short_code)
     # redirect to the 
     return RedirectResponse(url_entry.longUrl)
 

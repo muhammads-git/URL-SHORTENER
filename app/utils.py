@@ -7,11 +7,9 @@ GENERATE THE SHORT CODE
 using string,random with a lenght of 6 bytes...
 """
 
-def GenerateShortCode(length=6):
-   chars = string.ascii_letters + string.digits
-   return ''.join(random.choices(chars, k=length))
-
-
+# def GenerateShortSuffix(length=4):
+#    chars = string.ascii_letters + string.digits
+#    return ''.join(random.choices(chars, k=length))
 
 def GenerateTemperoryCode(lenght=5):
    tmp ='tmp'
@@ -19,5 +17,11 @@ def GenerateTemperoryCode(lenght=5):
    code = ''.join(random.choices(chars,k=lenght))
    return code
 
-# print(GenerateTempCode())
-   
+# check if the code is slug or tempCode
+def isTempCode(short_code:str) -> bool:
+   # check if - present then return False
+   for char in short_code:
+      if char == '-':
+         return False
+   return True
+
