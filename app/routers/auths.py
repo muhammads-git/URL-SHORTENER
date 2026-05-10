@@ -11,9 +11,7 @@ from app.schemas.schema import UserCreate
 # instance router
 router = APIRouter()
 
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 # get current user
 def getCurrentUser(token: str = Depends(oauth2_scheme)):
     username = decodeToken(token)
