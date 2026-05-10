@@ -25,3 +25,13 @@ def isTempCode(short_code:str) -> bool:
          return False
    return True
 
+
+
+# # fire click tracking function
+# async def fireClickTracking(request, short_code):
+#     try:
+#         redis = request.app.state.redis
+#         await redis.enqueue_job('trackClickTask',short_code=short_code)
+#     except Exception as e:
+#         print(f'Erro calling Queue for tracking Clicks. ->: {e}')
+#         print('Redis Failed!')
