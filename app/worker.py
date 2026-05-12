@@ -82,5 +82,8 @@ async def trackClickTask(ctx,short_code):
 
 
 class WorkerSettings:
+   print('Connecting to Redis......')
    redis_settings = RedisSettings(host='127.0.0.1',port=6379)
+   print('Connection Successful!')
+   print('[Arq] Calling Functions....')
    functions = [upgradeLinkTask,trackClickTask]

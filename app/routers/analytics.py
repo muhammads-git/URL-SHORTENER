@@ -11,7 +11,7 @@ import io
 from app.utils import GenerateTemperoryCode
 from app.routers.auths import getCurrentUser
 from datetime import datetime,timezone,timedelta
-
+from app.utils import isTempCode
 
 # create router
 router = APIRouter()
@@ -19,7 +19,9 @@ router = APIRouter()
 
 @router.get('/analytics')
 def analytics(request: Request,db: Session = Depends(get_db),current_user = Depends(getCurrentUser)):
+
     user_id = db.query(User.id).filter(User.username == current_user).first()
+    
     if not user_id:
         raise HTTPException(status_code=404, detail='user_id not found!')
     # rate limit layer
@@ -66,11 +68,14 @@ def qr_code(short_code : str, db : Session = Depends(get_db)):
         Returns* :
             generates qrcode for it..
     """
-
-    url = db.query(Url).filter(Url.shortUrl == short_code).first()
+    if isTempCode:
+        url = db.query(Url).filter(Url.tmp_code == short_code).first()
+    else:
+        url = db.query(Url).fitler(Url.shortUrl == short_code).first()
 
     if not url:
         raise HTTPException(status_code=404,detail='url not found')
+    
     if url.expires_at < datetime.utcnow():
         raise HTTPException(status_code=410,detail='url has expired!')
     
