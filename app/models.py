@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer , String, DateTime , ForeignKey ,Interval
+from sqlalchemy import Column, Integer , String, DateTime , ForeignKey ,Interval,Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime, timedelta, timezone
@@ -26,6 +26,7 @@ class Url(Base):
    shortUrl = Column(String, unique=True, index=True)
    tmp_code = Column(String,index=True)
    clicks = Column(Integer, default=0)
+   is_active = Column(Boolean, default=True)
    created_at = Column(DateTime, default=datetime.utcnow)
 
    # new column
