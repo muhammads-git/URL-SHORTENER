@@ -27,6 +27,7 @@ class Url(Base):
    tmp_code = Column(String,index=True)
    clicks = Column(Integer, default=0)
    is_active = Column(Boolean, default=True)
+   testCol = Column(String)
    created_at = Column(DateTime, default=datetime.utcnow)
 
    # new column
