@@ -9,7 +9,7 @@ load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
 
 # create engine
-engine = create_engine(DATABASE_URL,pool_pre_ping=True)
+engine = create_engine(DATABASE_URL,pool_size=20,max_overflow=40,pool_pre_ping=True)
 
 # sessionmaker // this is a session
 SessionLocal = sessionmaker(
