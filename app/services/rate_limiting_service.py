@@ -7,19 +7,23 @@ import os
 
 load_dotenv()
 # from app.main import getCurrentUser
+REDIS_URL = os.getenv('REDIS_URL')
 
-redis_client = Redis(
-   host=os.getenv('REDIS_HOST'),
-   port=os.getenv('REDIS_PORT'),
-   decode_responses=True # this is because redis returns data in bytes so when use this parameter it
-   # automatically turns bytes into string... default
-)
-# binary for images
-redis_binary = Redis(
-   host=os.getenv('REDIS_HOST'),
-   port=os.getenv('REDIS_PORT'),
-   decode_responses=False
-)
+redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
+
+redis_binary = Redis.from_url(REDIS_URL, decode_responses=False)
+# redis_client = Redis(
+#    host=os.getenv('REDIS_HOST'),
+#    port=os.getenv('REDIS_PORT'),
+#    decode_responses=True # this is because redis returns data in bytes so when use this parameter it
+#    # automatically turns bytes into string... default
+# )
+# # binary for images
+# redis_binary = Redis(
+#    host=os.getenv('REDIS_HOST'),
+#    port=os.getenv('REDIS_PORT'),
+#    decode_responses=False
+# )
 
 
 def getClientIdentifier(request : Request, user_id=None) -> str:
